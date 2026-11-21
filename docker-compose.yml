@@ -2,15 +2,15 @@ services:
   db:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: agentready
-      POSTGRES_PASSWORD: agentready
-      POSTGRES_DB: agentready
+      POSTGRES_USER: agentcheck
+      POSTGRES_PASSWORD: agentcheck
+      POSTGRES_DB: agentcheck
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agentready"]
+      test: ["CMD-SHELL", "pg_isready -U agentcheck"]
       interval: 5s
       retries: 10
 volumes:
