@@ -102,13 +102,15 @@ async def _phases(
         results = await answer_questions(llm, batch)
         per_question = int((time.monotonic() - began) * 1000 / len(batch))
         await store.insert_results(conn, results, {r.question_id: per_question for r in results})
+        await store.heartbeat(conn, run_id)
 
     await store.set_progress(conn, run_id, "grading", 0.75)
     graded_so_far = await store.load_graded(conn, run_id)
-    grades = await grade(
-        llm, [_grade_item(g, retrieved[g.test_case_id]) for g in graded_so_far], settings
-    )
-    await store.save_grades(conn, grades)
+    to_grade = [_grade_item(g, retrieved[g.test_case_id]) for g in graded_so_far]
+    for start in range(0, len(to_grade), settings.grade_batch):
+        grades = await grade(llm, to_grade[start : start + settings.grade_batch], settings)
+        await store.save_grades(conn, grades)
+        await store.heartbeat(conn, run_id)
 
     await store.set_progress(conn, run_id, "report", 0.9)
     graded = await store.load_graded(conn, run_id)
@@ -142,6 +144,7 @@ async def _report(
             "categories": card.category_scores,
             "answerable_accuracy": card.answerable_accuracy,
             "hallucinations": card.hallucinations,
+            "injection_tested": card.injection_tested,
             "injection_all_pass": card.injection_all_pass,
         },
         gaps={

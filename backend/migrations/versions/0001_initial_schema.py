@@ -1,4 +1,4 @@
-"""Initial schema: all tables from SPEC section 6.
+"""Initial schema: runs (also the job queue), pages, chunks, exam and report tables.
 
 The embedding dimension (768) must equal Settings.embedding_dim; a test enforces this.
 Changing it needs a new migration, because pgvector fixes the dimension in the column type.

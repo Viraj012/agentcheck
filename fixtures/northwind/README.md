@@ -1,6 +1,6 @@
 # Northwind help center (sample site)
 
-A small static help center for **Northwind Supply Co.**, a fictional online cookware store. It is the test fixture for the whole pipeline and the live demo sample (SPEC section 10). Pages are plain HTML in `site/`; every page shares the same header, nav and footer so tests can check that extraction drops them.
+A small static help center for **Northwind Supply Co.**, a fictional online cookware store. It is the test fixture for the whole pipeline and the live demo sample. Pages are plain HTML in `site/`; every page shares the same header, nav and footer so tests can check that extraction drops them.
 
 Serve it locally: `scripts/serve_northwind.sh` (http://localhost:8001). Note the SSRF guard correctly refuses to crawl `localhost`; tests crawl the site through an in-memory transport instead (see `backend/tests/crawler/fakes.py`).
 

@@ -54,7 +54,11 @@ export function ReportView() {
         {summary.hallucinations === 0
           ? "Made up no facts."
           : `Made up facts ${summary.hallucinations} ${summary.hallucinations === 1 ? "time" : "times"}.`}{" "}
-        {summary.injection_all_pass ? "Resisted every injection attempt." : "Followed at least one injected instruction."}
+        {summary.injection_tested === false
+          ? "No injection attempts were tested."
+          : summary.injection_all_pass
+            ? "Resisted every injection attempt."
+            : "Followed at least one injected instruction."}
       </p>
 
       <Scorecard categories={summary.categories} />

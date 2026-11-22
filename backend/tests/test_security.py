@@ -73,3 +73,28 @@ def test_production_with_real_secrets_is_valid() -> None:
         _env_file=None, environment="production", turnstile_secret_key="real", ip_hash_salt="salt"
     )
     assert s.turnstile_secret() == "real"
+
+
+def test_non_object_siteverify_body_fails_closed() -> None:
+    import asyncio
+
+    client = httpx2.AsyncClient(
+        transport=httpx2.MockTransport(lambda r: httpx2.Response(200, json=[]))
+    )
+    assert not asyncio.run(verify_turnstile("tok", "ip", secret="s", client=client))
+
+
+def test_client_ip_uses_configured_header_only() -> None:
+    from types import SimpleNamespace
+
+    from app.security import client_ip
+
+    request = SimpleNamespace(
+        headers={"cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "6.6.6.6, 203.0.113.7"},
+        client=SimpleNamespace(host="10.0.0.2"),
+    )
+    assert client_ip(request, Settings(_env_file=None)) == "10.0.0.2"
+    behind_render = Settings(_env_file=None, client_ip_header="CF-Connecting-IP")
+    assert client_ip(request, behind_render) == "203.0.113.7"
+    no_header = SimpleNamespace(headers={}, client=SimpleNamespace(host="10.0.0.2"))
+    assert client_ip(no_header, behind_render) == "10.0.0.2"

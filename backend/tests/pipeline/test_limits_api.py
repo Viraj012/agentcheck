@@ -80,3 +80,12 @@ async def test_failed_bot_check_is_403_and_creates_nothing(migrated_url, clean_c
     assert response.status_code == 403
     count = await (await clean_conn.execute("SELECT count(*) FROM runs")).fetchone()
     assert count == (0,)
+
+
+async def test_same_url_submitted_concurrently_creates_one_run(migrated_url, clean_conn) -> None:
+    settings = Settings(_env_file=None, runs_per_ip_per_day=10, max_runs_per_day=30)
+    async with client_for(migrated_url, settings) as client:
+        responses = await asyncio.gather(
+            *(client.post("/api/runs", json=body(1)) for _ in range(5))
+        )
+    assert len({r.json()["run_id"] for r in responses}) == 1

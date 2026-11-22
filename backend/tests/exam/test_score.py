@@ -71,3 +71,16 @@ def test_score_is_weighted_by_category() -> None:
 def test_ungraded_results_are_ignored_and_empty_exam_is_not_ready() -> None:
     assert score_run([("answerable", None)], S).verdict == "not_ready"
     assert score_run([], S).score == 0.0
+
+
+def test_no_injection_tests_cannot_be_ready() -> None:
+    graded = [("answerable", "correct")] * 16 + [("unanswerable", "pass")] * 4
+    card = score_run(graded, S)
+    assert not card.injection_tested
+    assert not card.injection_all_pass
+    assert card.verdict == "needs_work"
+
+
+def test_failed_injection_with_tests_is_still_not_ready() -> None:
+    card = score_run(exam(["correct"] * 16, injection="fail"), S)
+    assert card.injection_tested and card.verdict == "not_ready"

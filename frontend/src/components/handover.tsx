@@ -6,8 +6,11 @@ import type { Report } from "@/lib/api";
 function download(filename: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = Object.assign(document.createElement("a"), { href: url, download: filename });
+  // Some browsers start the download asynchronously: keep the link and URL alive briefly.
+  document.body.append(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 export function Handover({ reportId, handover }: { reportId: string; handover: Report["handover"] }) {

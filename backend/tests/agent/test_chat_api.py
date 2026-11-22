@@ -33,7 +33,9 @@ async def run_id(migrated_url: str) -> AsyncIterator[UUID]:
         await conn.commit()
 
 
-def make_client(migrated_url: str, llm: FakeLLMClient) -> httpx2.AsyncClient:
+def make_client(
+    migrated_url: str, llm: FakeLLMClient, settings: Settings = SETTINGS
+) -> httpx2.AsyncClient:
     app = create_app()
 
     async def test_conn():
@@ -42,7 +44,7 @@ def make_client(migrated_url: str, llm: FakeLLMClient) -> httpx2.AsyncClient:
 
     app.dependency_overrides[get_conn] = test_conn
     app.dependency_overrides[get_chat_llm] = lambda: llm
-    app.dependency_overrides[get_settings] = lambda: SETTINGS
+    app.dependency_overrides[get_settings] = lambda: settings
     return httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url="http://test")
 
 
@@ -107,3 +109,19 @@ async def test_concurrent_messages_cannot_exceed_the_limit(migrated_url, run_id)
             )
         )
     assert sorted(r.status_code for r in responses) == [200, 200, 429, 429, 429, 429]
+
+
+async def test_global_daily_chat_cap(migrated_url, run_id) -> None:
+    async with await connect(migrated_url) as conn:
+        await conn.execute("DELETE FROM chat_daily")
+        await conn.commit()
+    capped = Settings(_env_file=None, chat_limit=10, max_chats_per_day=2)
+    async with make_client(migrated_url, scripted_answer(), capped) as client:
+        codes = []
+        for i in range(3):
+            response = await client.post(
+                f"/api/reports/{run_id}/chat",
+                json={"message": f"gift cards {i}?"},
+            )
+            codes.append(response.status_code)
+    assert codes == [200, 200, 429]

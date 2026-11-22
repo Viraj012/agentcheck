@@ -4,6 +4,9 @@ import hashlib
 import hmac
 
 import httpx2
+from starlette.requests import Request
+
+from app.config import Settings
 
 SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 TURNSTILE_TOKEN_MAX = 2048
@@ -24,6 +27,19 @@ async def verify_turnstile(
         response = await client.post(
             SITEVERIFY_URL, json={"secret": secret, "response": token, "remoteip": ip}
         )
-        return response.status_code == 200 and response.json().get("success") is True
+        body = response.json()
+        return (
+            response.status_code == 200 and isinstance(body, dict) and body.get("success") is True
+        )
     except (httpx2.HTTPError, ValueError):
         return False
+
+
+def client_ip(request: Request, settings: Settings) -> str:
+    """The visitor's IP. Behind Render, Cloudflare sets CF-Connecting-IP to the real client;
+    unlike the leftmost X-Forwarded-For entry, callers can't forge it."""
+    if settings.client_ip_header:
+        forwarded = request.headers.get(settings.client_ip_header.lower(), "").strip()
+        if forwarded:
+            return forwarded
+    return request.client.host if request.client else "unknown"

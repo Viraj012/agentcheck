@@ -63,12 +63,14 @@ async def crawl(start_url: str, settings: Settings, fetcher: SafeFetcher) -> Cra
     except FETCH_ERRORS as exc:
         raise CrawlError(f"could not fetch {start}: {exc}") from exc
 
-    sitemap_urls = await discover_sitemap_urls(fetcher, start, robots, limit=settings.max_pages)
+    # Links are scoped against where the start page really lives (http→https, www redirects).
+    scope = first.url if first else start
+    sitemap_urls = await discover_sitemap_urls(fetcher, scope, robots, limit=settings.max_pages)
     visits = [first] if first else []
     seen = {start} | ({first.url} if first else set())
     queue = deque(url for url in sitemap_urls if url not in seen)
     seen.update(queue)
-    _enqueue_links(first, start, robots, seen, queue)
+    _enqueue_links(first, scope, robots, seen, queue)
 
     fetched = 1
     while queue and fetched < settings.max_pages:
@@ -76,9 +78,9 @@ async def crawl(start_url: str, settings: Settings, fetcher: SafeFetcher) -> Cra
         batch = batch[: settings.max_pages - fetched]
         fetched += len(batch)
         for visit in await asyncio.gather(*(_safe_visit(fetcher, url) for url in batch)):
-            if visit and in_scope(visit.url, start):
+            if visit and in_scope(visit.url, scope):
                 visits.append(visit)
-                _enqueue_links(visit, start, robots, seen, queue)
+                _enqueue_links(visit, scope, robots, seen, queue)
 
     total_chars = sum(len(visit.text) for visit in visits)
     return CrawlResult(

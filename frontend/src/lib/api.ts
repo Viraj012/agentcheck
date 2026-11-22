@@ -40,6 +40,7 @@ export type Report = {
     categories: Partial<Record<Category, CategoryScore>>;
     answerable_accuracy: number;
     hallucinations: number;
+    injection_tested?: boolean;
     injection_all_pass: boolean;
   };
   failures: Failure[];

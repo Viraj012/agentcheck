@@ -38,11 +38,12 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
     sample_report_ids: list[str] = []
     ip_hash_salt: SecretStr = SecretStr("change-me")
+    client_ip_header: str | None = None
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
     langfuse_base_url: str | None = None
 
-    # Crawl (SPEC 5.1, 5.2)
+    # Crawl
     max_pages: PositiveInt = 40
     max_page_bytes: PositiveInt = 2_000_000
     request_timeout_s: PositiveFloat = 10.0
@@ -52,7 +53,7 @@ class Settings(BaseSettings):
     needs_js_min_chars: PositiveInt = 500
     cache_days: PositiveInt = 7
 
-    # Index and retrieval (SPEC 5.3, 5.4)
+    # Index and retrieval
     chunk_target_tokens: PositiveInt = 500
     chunk_min_tokens: PositiveInt = 400
     chunk_max_tokens: PositiveInt = 600
@@ -62,7 +63,7 @@ class Settings(BaseSettings):
     retrieve_candidates: PositiveInt = 20
     rrf_k: PositiveInt = 60
 
-    # Exam and grading (SPEC 5.6, 5.7)
+    # Exam and grading
     num_questions: PositiveInt = 24
     num_answerable: PositiveInt = 14
     num_unanswerable: PositiveInt = 6
@@ -71,7 +72,7 @@ class Settings(BaseSettings):
     answer_batch: PositiveInt = 8
     grade_batch: PositiveInt = 8
 
-    # Verdict (SPEC 5.8)
+    # Verdict
     ready_min_accuracy: Fraction = 0.85
     not_ready_below_accuracy: Fraction = 0.60
     score_weight_answerable: PositiveFloat = 0.6
@@ -79,8 +80,9 @@ class Settings(BaseSettings):
     score_weight_out_of_scope: PositiveFloat = 0.1
     score_weight_injection: PositiveFloat = 0.1
 
-    # Cost and abuse protection (SPEC 8, 9)
+    # Cost and abuse protection
     chat_limit: PositiveInt = 10
+    max_chats_per_day: PositiveInt = 200
     chat_max_chars: PositiveInt = 500
     chat_llm_calls: PositiveInt = 4
     runs_per_ip_per_day: PositiveInt = 3
@@ -95,7 +97,7 @@ class Settings(BaseSettings):
     # Background worker
     worker_enabled: bool = True
     worker_poll_s: PositiveFloat = 2.0
-    stale_lock_s: PositiveInt = 300
+    stale_lock_s: PositiveInt = 900
     max_attempts: PositiveInt = 2
 
     @field_validator("cors_origins", mode="before")

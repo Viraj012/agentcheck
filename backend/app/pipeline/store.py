@@ -25,6 +25,12 @@ async def set_progress(
     await conn.commit()
 
 
+async def heartbeat(conn: psycopg.AsyncConnection, run_id: UUID) -> None:
+    """Refresh locked_at during long phases so a live run is never mistaken for a stale one."""
+    await conn.execute("UPDATE runs SET locked_at = now() WHERE id = %s", (run_id,))
+    await conn.commit()
+
+
 async def finish_run(
     conn: psycopg.AsyncConnection,
     run_id: UUID,
@@ -128,11 +134,6 @@ async def load_graded(conn: psycopg.AsyncConnection, run_id: UUID) -> list[Grade
         (run_id,),
     )
     return [GradedQuestion(*row) for row in await cursor.fetchall()]
-
-
-async def chunk_texts(conn: psycopg.AsyncConnection, ids: Sequence[int]) -> dict[int, str]:
-    cursor = await conn.execute("SELECT id, text FROM chunks WHERE id = ANY(%s)", (list(ids),))
-    return dict(await cursor.fetchall())
 
 
 async def save_report(

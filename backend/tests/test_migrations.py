@@ -19,6 +19,7 @@ TABLES = {
     "reports",
     "judge_labels",
     "chat_usage",
+    "chat_daily",
 }
 
 

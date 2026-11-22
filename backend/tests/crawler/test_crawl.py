@@ -177,3 +177,18 @@ async def test_crawls_local_northwind_server_over_real_sockets(northwind_server:
     result = await crawl(START, settings(), fetcher)
     await fetcher.aclose()
     assert {page.url.removeprefix(f"http://{HOST}") for page in result.pages} == NORTHWIND_PAGES
+
+
+async def test_scope_follows_the_start_page_redirect() -> None:
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        if request.url.scheme == "http":
+            return httpx2.Response(301, headers={"location": f"https://{HOST}{request.url.path}"})
+        extra = "<a href='/second'>next</a>" if request.url.path == "/" else ""
+        html = article(f"Page {request.url.path}. " + LONG + extra)
+        return httpx2.Response(200, headers={"content-type": "text/html"}, text=html)
+
+    fetcher = SafeFetcher(settings(), resolver=RESOLVER, transport=httpx2.MockTransport(handler))
+    result = await crawl(START, settings(), fetcher)
+    urls = [page.url for page in result.pages]
+    assert urls[0] == f"https://{HOST}/"
+    assert f"https://{HOST}/second" in urls

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from app.crawler.urls import InvalidURLError, normalize_url
 from app.deps import ConnDep, SettingsDep, TurnstileDep
-from app.security import hash_ip
+from app.security import client_ip, hash_ip
 
 router = APIRouter()
 
@@ -50,9 +50,11 @@ async def create_run(
         url = normalize_url(body.url)
     except InvalidURLError as exc:
         raise HTTPException(422, str(exc)) from exc
-    ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request, settings)
     if not await turnstile(body.turnstile_token, ip):
         raise HTTPException(403, "The bot check failed. Reload the page and try again.")
+    # One lock for all run creation: the in-flight check and count-then-insert can't race.
+    await conn.execute("SELECT pg_advisory_xact_lock(hashtext('create_run'))")
     cached = await _one(
         conn,
         """
@@ -64,6 +66,7 @@ async def create_run(
         (url, settings.cache_days),
     )
     if cached:
+        await conn.rollback()
         return {"report_id": cached[0], "cached": True}
     in_progress = await _one(
         conn,
@@ -72,10 +75,9 @@ async def create_run(
         (url,),
     )
     if in_progress:
+        await conn.rollback()
         return {"run_id": in_progress[0]}
     visitor = hash_ip(ip, settings.ip_hash_salt.get_secret_value())
-    # One lock for all run creation: count-then-insert can't race past a limit.
-    await conn.execute("SELECT pg_advisory_xact_lock(hashtext('create_run'))")
     limit = await _limit_reached(conn, visitor, settings)
     if limit:
         await conn.rollback()
