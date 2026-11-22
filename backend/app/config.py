@@ -67,6 +67,8 @@ class Settings(BaseSettings):
 
     # Cost and abuse protection (SPEC 8, 9)
     chat_limit: PositiveInt = 10
+    chat_max_chars: PositiveInt = 500
+    chat_llm_calls: PositiveInt = 4
     runs_per_ip_per_day: PositiveInt = 3
     max_runs_per_day: PositiveInt = 30
     llm_rpm: PositiveInt = 12

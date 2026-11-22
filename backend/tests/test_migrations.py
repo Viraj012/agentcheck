@@ -10,7 +10,16 @@ from tests.conftest import alembic_config
 
 pytestmark = pytest.mark.db
 
-TABLES = {"runs", "pages", "chunks", "test_cases", "results", "reports", "judge_labels"}
+TABLES = {
+    "runs",
+    "pages",
+    "chunks",
+    "test_cases",
+    "results",
+    "reports",
+    "judge_labels",
+    "chat_usage",
+}
 
 
 @pytest.fixture

@@ -1,44 +1,20 @@
 from collections.abc import AsyncIterator
-from pathlib import Path
 from uuid import UUID
 
 import psycopg
 import pytest
 
 from app.config import Settings
-from app.crawler.crawl import CrawledPage
-from app.crawler.extract import extract_page
 from app.crawler.store import save_pages
 from app.db import connect
 from app.indexing.store import index_run
 from app.llm.fake import FakeLLMClient
 from app.retrieval.search import hybrid_search, keyword_search, vector_search
+from tests.northwind import new_run, northwind_pages
 
 pytestmark = pytest.mark.db
 
 SETTINGS = Settings(_env_file=None)
-SITE = Path(__file__).resolve().parents[3] / "fixtures" / "northwind" / "site"
-
-
-def northwind_pages() -> list[CrawledPage]:
-    pages = []
-    for path in sorted(SITE.rglob("*.html")):
-        if "internal" in path.parts:
-            continue
-        page = extract_page(path.read_text(), f"https://northwind.test/{path.relative_to(SITE)}")
-        pages.append(CrawledPage(page_url(path), page.title, page.text, str(path)))
-    return pages
-
-
-def page_url(path: Path) -> str:
-    return f"https://northwind.test/{path.relative_to(SITE)}"
-
-
-async def new_run(conn: psycopg.AsyncConnection) -> UUID:
-    cursor = await conn.execute(
-        "INSERT INTO runs (start_url, normalized_url) VALUES ('u', 'u') RETURNING id"
-    )
-    return (await cursor.fetchone())[0]
 
 
 @pytest.fixture

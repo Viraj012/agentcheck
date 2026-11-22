@@ -3,7 +3,7 @@
 import hashlib
 import math
 from collections import deque
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -21,10 +21,18 @@ class FakeCall:
 
 
 class FakeLLMClient:
-    """Returns scripted JSON responses in order and hash-derived embeddings."""
+    """Returns scripted JSON responses in order (or builds each one from the prompt with
+    `responder`) and hash-derived embeddings."""
 
-    def __init__(self, responses: Iterable[dict[str, Any] | BaseModel] = (), *, dim: int) -> None:
+    def __init__(
+        self,
+        responses: Iterable[dict[str, Any] | BaseModel] = (),
+        *,
+        dim: int,
+        responder: Callable[[str], dict[str, Any]] | None = None,
+    ) -> None:
         self._responses = deque(responses)
+        self._responder = responder
         self._dim = dim
         self.calls: list[FakeCall] = []
 
@@ -37,6 +45,8 @@ class FakeLLMClient:
         role: ModelRole = "fast",
     ) -> T:
         self.calls.append(FakeCall("generate_json", prompt, system, role))
+        if self._responder is not None:
+            self._responses.append(self._responder(prompt))
         if not self._responses:
             raise LLMError("FakeLLMClient has no scripted response left")
         response = self._responses.popleft()

@@ -50,3 +50,8 @@ async def test_embed_is_deterministic_and_unit_length() -> None:
 
 def test_fake_satisfies_protocol() -> None:
     assert isinstance(FakeLLMClient(dim=8), LLMClient)
+
+
+async def test_responder_builds_reply_from_prompt() -> None:
+    client = FakeLLMClient(dim=8, responder=lambda p: {"answer": p.upper(), "abstained": False})
+    assert (await client.generate_json("hi", schema=Answer)).answer == "HI"
