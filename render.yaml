@@ -1,0 +1,31 @@
+# Render Blueprint for the backend API (+ background worker, same process).
+# Secrets marked `sync: false` are entered in the Render dashboard when the Blueprint is created.
+services:
+  - type: web
+    name: readiness-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    # Free plans have no pre-deploy step, so migrations run at startup (they are idempotent).
+    # --proxy-headers: Render's proxy sets X-Forwarded-For; per-visitor limits need the real IP.
+    startCommand: >-
+      uv run --no-sync alembic upgrade head &&
+      uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port $PORT
+      --proxy-headers --forwarded-allow-ips '*'
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: ENVIRONMENT
+        value: production
+      - key: IP_HASH_SALT
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
