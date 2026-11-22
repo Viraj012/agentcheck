@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     chunk_overlap_tokens: PositiveInt = 50
     embed_batch: PositiveInt = 100
     retrieve_k: PositiveInt = 6
+    retrieve_candidates: PositiveInt = 20
     rrf_k: PositiveInt = 60
 
     # Exam and grading (SPEC 5.6, 5.7)
@@ -69,6 +70,7 @@ class Settings(BaseSettings):
     runs_per_ip_per_day: PositiveInt = 3
     max_runs_per_day: PositiveInt = 30
     llm_rpm: PositiveInt = 12
+    llm_burst: PositiveInt = 3
     max_llm_calls_per_run: PositiveInt = 20
     llm_max_retries: PositiveInt = 4
 

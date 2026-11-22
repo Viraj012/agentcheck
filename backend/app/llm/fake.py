@@ -46,7 +46,9 @@ class FakeLLMClient:
         except ValidationError as exc:
             raise LLMError(f"scripted response does not match {schema.__name__}") from exc
 
-    async def embed(self, texts: Sequence[str], *, task: EmbedTask) -> list[list[float]]:
+    async def embed(
+        self, texts: Sequence[str], *, task: EmbedTask, titles: Sequence[str] | None = None
+    ) -> list[list[float]]:
         self.calls.extend(FakeCall("embed", text, None, None) for text in texts)
         return [self._vector(text) for text in texts]
 

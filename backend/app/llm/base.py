@@ -31,6 +31,11 @@ class LLMClient(Protocol):
         """Generate a response that validates against `schema`, or raise LLMError."""
         ...
 
-    async def embed(self, texts: Sequence[str], *, task: EmbedTask) -> list[list[float]]:
-        """Return one unit-length vector per input text, in order."""
+    async def embed(
+        self, texts: Sequence[str], *, task: EmbedTask, titles: Sequence[str] | None = None
+    ) -> list[list[float]]:
+        """Return one unit-length vector per input text, in order.
+
+        `titles` (documents only) gives the model each text's page/section title.
+        """
         ...
