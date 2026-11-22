@@ -75,13 +75,13 @@ def test_satisfies_protocol() -> None:
 
 async def test_generate_json_uses_role_model_and_schema() -> None:
     models = FakeModels([response(GOOD)])
-    client, _, _ = make_client(models)
+    client, _, _ = make_client(models, gemini_model_judge="judge-model")
     result = await client.generate_json(
         "grade this", schema=Verdict, system="be strict", role="judge"
     )
     assert result == Verdict(verdict="correct", reason="matches the source")
     call = models.generate_calls[0]
-    assert call["model"] == "gemini-3.8-flash"
+    assert call["model"] == "judge-model"
     assert call["contents"] == "grade this"
     assert call["config"].response_schema is Verdict
     assert call["config"].response_mime_type == "application/json"

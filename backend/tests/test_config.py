@@ -21,6 +21,7 @@ def test_defaults_match_spec() -> None:
         2,
     )
     assert s.grade_batch == 8
+    assert s.gemini_model_judge == "gemini-3.5-flash-lite"
     assert s.llm_rpm == 12
     assert s.max_llm_calls_per_run == 20
     assert s.runs_per_ip_per_day == 3

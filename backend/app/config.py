@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://agentcheck:agentcheck@localhost:5432/agentcheck"
     gemini_api_key: SecretStr | None = None
     gemini_model_fast: str = "gemini-3.5-flash-lite"
-    gemini_model_judge: str = "gemini-3.8-flash"
+    gemini_model_judge: str = "gemini-3.5-flash-lite"
     gemini_embedding_model: str = "gemini-embedding-2"
     embedding_dim: PositiveInt = 768
     cors_origins: list[str] = ["http://localhost:3000"]
