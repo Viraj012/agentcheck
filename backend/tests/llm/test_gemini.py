@@ -190,3 +190,11 @@ async def test_embed_empty_list_makes_no_call() -> None:
     client, budget, _ = make_client(models)
     assert await client.embed([], task="document") == []
     assert budget.used == 0
+
+
+def test_sdk_requests_time_out_and_skip_sdk_retries() -> None:
+    from app.llm.gemini import http_options
+
+    options = http_options(Settings(_env_file=None, llm_timeout_s=45))
+    assert options.timeout == 45_000
+    assert options.retry_options.attempts == 1

@@ -15,8 +15,8 @@ def test_defaults_match_spec() -> None:
     assert s.rrf_k == 60
     assert s.num_questions == 24
     assert (s.num_answerable, s.num_unanswerable, s.num_out_of_scope, s.num_injection) == (
-        16,
-        4,
+        14,
+        6,
         2,
         2,
     )

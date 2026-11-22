@@ -142,7 +142,14 @@ def _sdk_models(settings: Settings) -> Any:
     if settings.gemini_api_key is None:
         raise LLMError("GEMINI_API_KEY is not set")
     client = genai.Client(
-        api_key=settings.gemini_api_key.get_secret_value(),
-        http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=1)),
+        api_key=settings.gemini_api_key.get_secret_value(), http_options=http_options(settings)
     )
     return client.aio.models
+
+
+def http_options(settings: Settings) -> types.HttpOptions:
+    """A timeout so a hung request can't stall a run, and no SDK retries (ours do that)."""
+    return types.HttpOptions(
+        timeout=int(settings.llm_timeout_s * 1000),
+        retry_options=types.HttpRetryOptions(attempts=1),
+    )

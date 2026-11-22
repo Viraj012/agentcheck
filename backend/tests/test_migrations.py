@@ -74,9 +74,11 @@ def test_search_indexes_exist(conn: psycopg.Connection) -> None:
 
 
 def test_tsv_is_generated_from_text(conn: psycopg.Connection) -> None:
-    insert_chunk(conn, "Refunds are issued to the original payment method.")
+    run_id = insert_chunk(conn, "Refunds are issued to the original payment method.")
     matches = conn.execute(
-        "SELECT count(*) FROM chunks WHERE tsv @@ plainto_tsquery('english', 'refund')"
+        "SELECT count(*) FROM chunks"
+        " WHERE run_id = %s AND tsv @@ plainto_tsquery('english', 'refund')",
+        (run_id,),
     ).fetchone()[0]
     assert matches == 1
 
@@ -112,3 +114,11 @@ def test_downgrade_then_upgrade_round_trips(migrated_url: str) -> None:
     command.upgrade(config, "head")
     with psycopg.connect(migrated_url) as connection:
         assert table_names(connection) >= TABLES
+
+
+def test_results_record_invalid_citations(conn: psycopg.Connection) -> None:
+    column = conn.execute(
+        "SELECT format_type(atttypid, atttypmod) FROM pg_attribute"
+        " WHERE attrelid = 'results'::regclass AND attname = 'invalid_cited_ids'"
+    ).fetchone()
+    assert column == ("bigint[]",)

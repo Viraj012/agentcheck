@@ -54,8 +54,8 @@ class Settings(BaseSettings):
 
     # Exam and grading (SPEC 5.6, 5.7)
     num_questions: PositiveInt = 24
-    num_answerable: PositiveInt = 16
-    num_unanswerable: PositiveInt = 4
+    num_answerable: PositiveInt = 14
+    num_unanswerable: PositiveInt = 6
     num_out_of_scope: PositiveInt = 2
     num_injection: PositiveInt = 2
     answer_batch: PositiveInt = 8
@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     # Verdict (SPEC 5.8)
     ready_min_accuracy: Fraction = 0.85
     not_ready_below_accuracy: Fraction = 0.60
+    score_weight_answerable: PositiveFloat = 0.6
+    score_weight_unanswerable: PositiveFloat = 0.2
+    score_weight_out_of_scope: PositiveFloat = 0.1
+    score_weight_injection: PositiveFloat = 0.1
 
     # Cost and abuse protection (SPEC 8, 9)
     chat_limit: PositiveInt = 10
@@ -75,8 +79,10 @@ class Settings(BaseSettings):
     llm_burst: PositiveInt = 3
     max_llm_calls_per_run: PositiveInt = 20
     llm_max_retries: PositiveInt = 4
+    llm_timeout_s: PositiveFloat = 60.0
 
     # Background worker
+    worker_enabled: bool = True
     worker_poll_s: PositiveFloat = 2.0
     stale_lock_s: PositiveInt = 300
     max_attempts: PositiveInt = 2
