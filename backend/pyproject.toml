@@ -6,9 +6,11 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.1",
     "fastapi>=0.165.0",
+    "httpx2>=2.16.2",
     "psycopg[binary]>=3.3.9",
     "pydantic-settings>=2.16.3",
     "sqlalchemy>=2.1.9",
+    "trafilatura>=2.3.1",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -20,6 +22,8 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
 markers = ["db: needs a reachable Postgres"]
+# trafilatura imports urllib3's optional SOCKS module; we never use urllib3 for fetching.
+filterwarnings = ["ignore:SOCKS support in urllib3:urllib3.exceptions.DependencyWarning"]
 
 [tool.ruff]
 line-length = 100
@@ -30,7 +34,6 @@ select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC"]
 
 [dependency-groups]
 dev = [
-    "httpx2>=2.16.2",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.5.0",
     "ruff>=0.17.6",

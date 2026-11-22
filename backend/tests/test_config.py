@@ -47,3 +47,8 @@ def test_verdict_thresholds_must_be_ordered() -> None:
 def test_env_var_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAX_PAGES", "12")
     assert make().max_pages == 12
+
+
+def test_blank_env_value_keeps_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GEMINI_MODEL_FAST", "")
+    assert make().gemini_model_fast == Settings.model_fields["gemini_model_fast"].default
