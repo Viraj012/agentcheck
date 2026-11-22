@@ -6,6 +6,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Turnstile } from "@/components/turnstile";
 
 import { ApiError, createRun, wakeServer } from "@/lib/api";
+import { EXAMPLE_SITES } from "@/lib/labels";
 
 type ServerState = "unknown" | "waking" | "up" | "down";
 
@@ -68,6 +69,22 @@ export function CheckForm() {
         >
           {submitting ? "Starting…" : "Run the check"}
         </button>
+      </div>
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+        <span className="text-graphite">Try an example:</span>
+        {EXAMPLE_SITES.map((site) => (
+          <button
+            key={site.url}
+            type="button"
+            onClick={() => {
+              setUrl(site.url);
+              setError(null);
+            }}
+            className="font-semibold text-accent underline underline-offset-3"
+          >
+            {site.name}
+          </button>
+        ))}
       </div>
       <Turnstile onToken={setToken} resetKey={resetKey} />
       {error && (

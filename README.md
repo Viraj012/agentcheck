@@ -2,6 +2,8 @@
 
 Paste a help center's URL and find out whether an AI support agent built on it is safe to put in front of customers.
 
+**Live demo: [agentcheck-vert.vercel.app](https://agentcheck-vert.vercel.app/)** (the free backend sleeps when idle, so the first check can take a minute to start)
+
 AgentCheck crawls the help center, builds a grounded support agent from it, writes an exam for that agent, grades every answer, and produces a deployment-readiness report: a go/no-go verdict, the failures with reasons, gaps in the docs, and a handover package for the team that will run the agent.
 
 ## Why

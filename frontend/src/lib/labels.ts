@@ -54,3 +54,10 @@ export function asSentence(text: string): string {
   const trimmed = text.trim();
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
+
+/** Public, server-rendered help centers that work well as a first try. */
+export const EXAMPLE_SITES: { name: string; url: string }[] = [
+  { name: "DuckDuckGo help", url: "https://duckduckgo.com/duckduckgo-help-pages/" },
+  { name: "uv docs", url: "https://docs.astral.sh/uv/getting-started/" },
+  { name: "FastAPI tutorial", url: "https://fastapi.tiangolo.com/tutorial/" },
+];
