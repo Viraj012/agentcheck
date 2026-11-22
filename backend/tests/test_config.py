@@ -53,3 +53,24 @@ def test_env_var_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_blank_env_value_keeps_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GEMINI_MODEL_FAST", "")
     assert make().gemini_model_fast == Settings.model_fields["gemini_model_fast"].default
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('["https://a.vercel.app"]', ["https://a.vercel.app"]),
+        ("https://a.vercel.app", ["https://a.vercel.app"]),
+        (
+            "https://a.vercel.app, http://localhost:3000",
+            ["https://a.vercel.app", "http://localhost:3000"],
+        ),
+        ("[“https://a.vercel.app”]", ["https://a.vercel.app"]),
+        ("['https://a.vercel.app/']", ["https://a.vercel.app"]),
+        ("[https://a.vercel.app]", ["https://a.vercel.app"]),
+    ],
+)
+def test_cors_origins_accepts_common_formats(
+    monkeypatch: pytest.MonkeyPatch, raw: str, expected: list[str]
+) -> None:
+    monkeypatch.setenv("CORS_ORIGINS", raw)
+    assert make().cors_origins == expected

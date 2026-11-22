@@ -1,11 +1,12 @@
 """All runtime configuration. Every limit in the system is defined here."""
 
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import Field, PositiveFloat, PositiveInt, SecretStr, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, PositiveFloat, PositiveInt, SecretStr, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 APP_NAME = "AgentCheck"
 
@@ -34,7 +35,7 @@ class Settings(BaseSettings):
     gemini_model_judge: str = "gemini-3.5-flash-lite"
     gemini_embedding_model: str = "gemini-embedding-2"
     embedding_dim: PositiveInt = 768
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
     sample_report_ids: list[str] = []
     ip_hash_salt: SecretStr = SecretStr("change-me")
     langfuse_public_key: SecretStr | None = None
@@ -96,6 +97,23 @@ class Settings(BaseSettings):
     worker_poll_s: PositiveFloat = 2.0
     stale_lock_s: PositiveInt = 300
     max_attempts: PositiveInt = 2
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_origins(cls, value: object) -> object:
+        """Accept a JSON list or a comma-separated list, as people type them into dashboards.
+
+        Curly quotes, single quotes, brackets and trailing slashes are tolerated.
+        """
+        if not isinstance(value, str):
+            return value
+        text = value.strip().translate(str.maketrans("“”‘’'", '"""""'))
+        try:
+            parsed = json.loads(text)
+        except ValueError:
+            parsed = text.strip("[]").split(",")
+        items = parsed if isinstance(parsed, list) else [parsed]
+        return [str(item).strip().strip('"').rstrip("/") for item in items if str(item).strip()]
 
     @model_validator(mode="after")
     def _check_consistency(self) -> Self:
