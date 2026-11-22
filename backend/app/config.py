@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     gemini_embedding_model: str = "gemini-embedding-2"
     embedding_dim: PositiveInt = 768
     cors_origins: list[str] = ["http://localhost:3000"]
+    sample_report_ids: list[str] = []
     ip_hash_salt: SecretStr = SecretStr("change-me")
 
     # Crawl (SPEC 5.1, 5.2)

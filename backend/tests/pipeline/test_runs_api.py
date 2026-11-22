@@ -139,3 +139,23 @@ async def test_report_has_verdict_scores_failures_gaps_and_handover(client, conn
     assert failure["retrieved"] and {"id", "page_url", "heading_path", "text"} <= set(
         failure["retrieved"][0]
     )
+
+
+async def test_samples_lists_configured_reports_only(migrated_url, conn) -> None:
+    run_id = await finished_run(conn)
+    app = create_app()
+
+    async def test_conn():
+        async with await connect(migrated_url) as c:
+            yield c
+
+    app.dependency_overrides[get_conn] = test_conn
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None, sample_report_ids=[str(run_id), str(uuid4())]
+    )
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(transport=transport, base_url="http://test") as client:
+        body = (await client.get("/api/samples")).json()
+    assert body == [
+        {"report_id": str(run_id), "start_url": START, "verdict": "ready", "score": 100.0}
+    ]

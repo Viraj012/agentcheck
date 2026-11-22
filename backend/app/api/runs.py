@@ -71,6 +71,27 @@ async def create_run(
     return {"run_id": created[0]}
 
 
+@router.get("/api/samples")
+async def samples(conn: ConnDep, settings: SettingsDep) -> list[dict[str, Any]]:
+    """Pre-generated sample reports, in the configured order."""
+    if not settings.sample_report_ids:
+        return []
+    cursor = await conn.execute(
+        """
+        SELECT rep.run_id::text, r.start_url, rep.verdict, rep.score
+        FROM reports rep JOIN runs r ON r.id = rep.run_id
+        WHERE rep.run_id::text = ANY(%s)
+        """,
+        (settings.sample_report_ids,),
+    )
+    found = {row[0]: row for row in await cursor.fetchall()}
+    return [
+        {"report_id": i, "start_url": found[i][1], "verdict": found[i][2], "score": found[i][3]}
+        for i in settings.sample_report_ids
+        if i in found
+    ]
+
+
 @router.get("/api/runs/{run_id}")
 async def run_status(run_id: UUID, conn: ConnDep) -> RunStatus:
     row = await _one(
