@@ -15,6 +15,10 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
 ]
 
+[project.optional-dependencies]
+# Langfuse tracing; only needed when LANGFUSE_* settings are present.
+tracing = ["langfuse>=4.18"]
+
 [tool.uv]
 package = false
 

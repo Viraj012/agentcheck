@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
+import { Turnstile } from "@/components/turnstile";
+
 import { ApiError, createRun, wakeServer } from "@/lib/api";
 
 type ServerState = "unknown" | "waking" | "up" | "down";
@@ -13,6 +15,8 @@ export function CheckForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [server, setServer] = useState<ServerState>("unknown");
+  const [token, setToken] = useState<string | null>(null);
+  const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
     const slow = setTimeout(() => setServer((s) => (s === "unknown" ? "waking" : s)), 2500);
@@ -25,17 +29,12 @@ export function CheckForm() {
     setError(null);
     setSubmitting(true);
     try {
-      const reply = await createRun(url);
+      const reply = await createRun(url, token);
       router.push("report_id" in reply ? `/reports/${reply.report_id}` : `/runs/${reply.run_id}`);
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.status === 429
-          ? "Today's free checks are used up. Open a sample report below, or try again tomorrow."
-          : err instanceof ApiError
-            ? err.message
-            : "Something went wrong. Try again.",
-      );
+      setError(err instanceof ApiError ? err.message : "Something went wrong. Try again.");
       setSubmitting(false);
+      setResetKey((k) => k + 1);
     }
   }
 
@@ -64,12 +63,13 @@ export function CheckForm() {
         />
         <button
           type="submit"
-          disabled={submitting || url.trim() === ""}
+          disabled={submitting || url.trim() === "" || token === null}
           className="rounded-md bg-accent px-5 py-2.5 font-semibold text-paper disabled:opacity-50"
         >
           {submitting ? "Starting…" : "Run the check"}
         </button>
       </div>
+      <Turnstile onToken={setToken} resetKey={resetKey} />
       {error && (
         <p id="url-error" role="alert" className="mt-2 text-notready">
           {error}

@@ -7,7 +7,7 @@ from html import escape
 from pydantic import BaseModel
 
 from app.config import Settings
-from app.exam.models import allowed_verdicts
+from app.exam.models import normalize_verdict
 from app.llm.base import LLMClient, LLMError
 
 JUDGE_PROMPT_VERSION = "judge-v1"
@@ -87,9 +87,9 @@ async def grade(llm: LLMClient, items: Sequence[GradeItem], settings: Settings) 
             found = by_id.get(item.id)
             if found is None:
                 raise LLMError(f"judge gave no grade for item {item.id}")
-            verdict = found.verdict.strip().lower()
-            if verdict not in allowed_verdicts(item.category):
-                raise LLMError(f"judge verdict {verdict!r} is not valid for {item.category}")
+            verdict = normalize_verdict(item.category, found.verdict)
+            if verdict is None:
+                raise LLMError(f"judge verdict {found.verdict!r} is not valid for {item.category}")
             results.append(Grade(item.id, verdict, found.reason.strip()))
     return results
 

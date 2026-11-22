@@ -12,12 +12,14 @@ from app.config import APP_NAME, Settings, get_settings
 from app.crawler.fetch import SafeFetcher
 from app.llm.gemini import GeminiLLMClient
 from app.llm.limits import CallBudget, TokenBucket, Usage
+from app.logging_setup import configure_logging
 from app.pipeline.worker import worker_loop
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
+    configure_logging()
     limiter = TokenBucket(settings.llm_rpm, burst=settings.llm_burst)
     application.state.limiter = limiter
     worker = asyncio.create_task(_worker(settings, limiter)) if settings.worker_enabled else None

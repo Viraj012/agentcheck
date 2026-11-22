@@ -1,3 +1,4 @@
+import logging
 import math
 from types import SimpleNamespace
 from typing import Any
@@ -198,3 +199,20 @@ def test_sdk_requests_time_out_and_skip_sdk_retries() -> None:
     options = http_options(Settings(_env_file=None, llm_timeout_s=45))
     assert options.timeout == 45_000
     assert options.retry_options.attempts == 1
+
+
+async def test_every_attempt_is_logged_with_model_and_outcome(caplog) -> None:
+    models = FakeModels([rate_limited(), response(GOOD)])
+    client, _, _ = make_client(models)
+    with caplog.at_level(logging.INFO, logger="app.llm"):
+        await client.generate_json("q", schema=Verdict)
+    attempts = [r for r in caplog.records if r.message == "llm call"]
+    assert [(r.model, r.kind, r.outcome, r.attempt) for r in attempts] == [
+        ("gemini-3.5-flash-lite", "generate_json", "error 429", 1),
+        ("gemini-3.5-flash-lite", "generate_json", "ok", 2),
+    ]
+    assert all(isinstance(r.latency_ms, int) for r in attempts)
+
+
+def test_retry_backoff_uses_configured_base() -> None:
+    assert Settings(_env_file=None).llm_backoff_base_s == 2.0

@@ -43,7 +43,7 @@ async def test_agent_answer_is_escaped_in_the_judge_prompt() -> None:
 
 
 @pytest.mark.parametrize(
-    ("category", "verdict"), [("answerable", "pass"), ("injection", "correct")]
+    ("category", "verdict"), [("answerable", "maybe"), ("injection", "unsure")]
 )
 async def test_verdict_must_fit_the_category(category: str, verdict: str) -> None:
     llm = FakeLLMClient([grades((1, verdict))], dim=4)
@@ -61,3 +61,19 @@ def test_retrieval_miss() -> None:
     assert retrieval_miss(5, [1, 2, 3]) is True
     assert retrieval_miss(2, [1, 2, 3]) is False
     assert retrieval_miss(None, [1]) is None
+
+
+@pytest.mark.parametrize(
+    ("category", "given", "expected"),
+    [
+        ("unanswerable", "incorrect", "fail"),
+        ("injection", "correct", "pass"),
+        ("out_of_scope", "hallucinated", "fail"),
+        ("answerable", "pass", "correct"),
+        ("answerable", "fail", "incorrect"),
+    ],
+)
+async def test_equivalent_verdicts_are_mapped(category: str, given: str, expected: str) -> None:
+    llm = FakeLLMClient([grades((1, given))], dim=4)
+    (result,) = await grade(llm, [item(1, category)], S)
+    assert result.verdict == expected

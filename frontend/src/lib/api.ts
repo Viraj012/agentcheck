@@ -93,8 +93,11 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 20000): 
   return response.json() as Promise<T>;
 }
 
-export const createRun = (url: string) =>
-  request<CreateRunReply>("/api/runs", { method: "POST", body: JSON.stringify({ url }) });
+export const createRun = (url: string, turnstileToken: string | null) =>
+  request<CreateRunReply>("/api/runs", {
+    method: "POST",
+    body: JSON.stringify({ url, turnstile_token: turnstileToken }),
+  });
 export const getRun = (id: string) => request<RunStatus>(`/api/runs/${id}`);
 export const getReport = (id: string) => request<Report>(`/api/reports/${id}`);
 export const getSamples = () => request<Sample[]>("/api/samples");

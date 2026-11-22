@@ -1,8 +1,9 @@
 """FastAPI dependencies. Tests override these to inject a test database and a fake LLM."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Annotated
 
+import httpx2
 import psycopg
 from fastapi import Depends, Request
 
@@ -11,6 +12,7 @@ from app.db import connect
 from app.llm.base import LLMClient
 from app.llm.gemini import GeminiLLMClient
 from app.llm.limits import CallBudget, Usage
+from app.security import verify_turnstile
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -33,5 +35,19 @@ def get_chat_llm(request: Request, settings: SettingsDep) -> LLMClient:
     )
 
 
+TurnstileCheck = Callable[[str | None, str], Awaitable[bool]]
+
+
+def get_turnstile(settings: SettingsDep) -> TurnstileCheck:
+    async def check(token: str | None, ip: str) -> bool:
+        async with httpx2.AsyncClient(timeout=10.0) as client:
+            return await verify_turnstile(
+                token, ip, secret=settings.turnstile_secret(), client=client
+            )
+
+    return check
+
+
 ConnDep = Annotated[psycopg.AsyncConnection, Depends(get_conn)]
 ChatLLMDep = Annotated[LLMClient, Depends(get_chat_llm)]
+TurnstileDep = Annotated[TurnstileCheck, Depends(get_turnstile)]

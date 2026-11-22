@@ -2,12 +2,15 @@
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, PositiveFloat, PositiveInt, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 APP_NAME = "AgentCheck"
+
+# Cloudflare's published test secret: every token passes. Development only.
+TURNSTILE_TEST_SECRET = "1x0000000000000000000000000000000AA"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -23,6 +26,8 @@ class Settings(BaseSettings):
     )
 
     # Infrastructure and secrets
+    environment: Literal["development", "production"] = "development"
+    turnstile_secret_key: SecretStr | None = None
     database_url: str = "postgresql://agentcheck:agentcheck@localhost:5432/agentcheck"
     gemini_api_key: SecretStr | None = None
     gemini_model_fast: str = "gemini-3.5-flash-lite"
@@ -32,6 +37,9 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
     sample_report_ids: list[str] = []
     ip_hash_salt: SecretStr = SecretStr("change-me")
+    langfuse_public_key: SecretStr | None = None
+    langfuse_secret_key: SecretStr | None = None
+    langfuse_base_url: str | None = None
 
     # Crawl (SPEC 5.1, 5.2)
     max_pages: PositiveInt = 40
@@ -80,6 +88,7 @@ class Settings(BaseSettings):
     llm_burst: PositiveInt = 3
     max_llm_calls_per_run: PositiveInt = 20
     llm_max_retries: PositiveInt = 4
+    llm_backoff_base_s: PositiveFloat = 2.0
     llm_timeout_s: PositiveFloat = 60.0
 
     # Background worker
@@ -104,7 +113,21 @@ class Settings(BaseSettings):
             raise ValueError("chunk token sizes must satisfy min <= target <= max")
         if self.chunk_overlap_tokens >= self.chunk_min_tokens:
             raise ValueError("chunk_overlap_tokens must be smaller than chunk_min_tokens")
+        if self.environment == "production":
+            secret = (
+                self.turnstile_secret_key.get_secret_value() if self.turnstile_secret_key else ""
+            )
+            if not secret or secret == TURNSTILE_TEST_SECRET:
+                raise ValueError("production needs a real TURNSTILE_SECRET_KEY")
+            if self.ip_hash_salt.get_secret_value() == "change-me":
+                raise ValueError("production needs a real IP_HASH_SALT")
         return self
+
+    def turnstile_secret(self) -> str:
+        """The configured secret, or Cloudflare's always-pass test secret in development."""
+        if self.turnstile_secret_key:
+            return self.turnstile_secret_key.get_secret_value()
+        return TURNSTILE_TEST_SECRET
 
 
 @lru_cache

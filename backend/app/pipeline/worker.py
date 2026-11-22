@@ -102,7 +102,16 @@ async def process_one(
             )
         finally:
             await fetcher.aclose()
-        log.info("run %s finished: %s (%s LLM calls)", run_id, status, budget.used)
+        log.info(
+            "run finished",
+            extra={
+                "run_id": str(run_id),
+                "status": status,
+                "llm_calls": budget.used,
+                "input_tokens": usage.input_tokens,
+                "output_tokens": usage.output_tokens,
+            },
+        )
         return True
 
 

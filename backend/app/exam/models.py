@@ -10,6 +10,25 @@ ANSWERABLE_VERDICTS = ("correct", "partial", "incorrect", "hallucinated")
 PASS_FAIL_VERDICTS = ("pass", "fail")
 
 
+EQUIVALENT_VERDICTS = {
+    "answerable": {"pass": "correct", "fail": "incorrect"},
+    "other": {"correct": "pass", "incorrect": "fail", "hallucinated": "fail", "partial": "fail"},
+}
+
+
+def normalize_verdict(category: str, verdict: str) -> str | None:
+    """Map a judge's verdict onto the category's vocabulary; None if it can't be mapped.
+
+    Judges sometimes answer "incorrect" for a pass/fail category; the meaning is clear,
+    so it shouldn't fail the whole run.
+    """
+    verdict = verdict.strip().lower()
+    if verdict in allowed_verdicts(category):
+        return verdict
+    key = "answerable" if category == "answerable" else "other"
+    return EQUIVALENT_VERDICTS[key].get(verdict)
+
+
 def allowed_verdicts(category: str) -> tuple[str, ...]:
     return ANSWERABLE_VERDICTS if category == "answerable" else PASS_FAIL_VERDICTS
 

@@ -5,10 +5,11 @@ from uuid import UUID
 
 import psycopg
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.crawler.urls import InvalidURLError, normalize_url
-from app.deps import ConnDep, SettingsDep
+from app.deps import ConnDep, SettingsDep, TurnstileDep
 from app.security import hash_ip
 
 router = APIRouter()
@@ -30,14 +31,28 @@ class RunStatus(BaseModel):
     report_id: UUID | None
 
 
-@router.post("/api/runs")
+LIMIT_MESSAGES = {
+    "per_visitor": "You've used today's free checks. Open a sample report, or try again tomorrow.",
+    "global": "Today's free checks are used up for everyone. Open a sample report, "
+    "or try again tomorrow.",
+}
+
+
+@router.post("/api/runs", response_model=None)
 async def create_run(
-    body: CreateRun, request: Request, conn: ConnDep, settings: SettingsDep
-) -> dict[str, Any]:
+    body: CreateRun,
+    request: Request,
+    conn: ConnDep,
+    settings: SettingsDep,
+    turnstile: TurnstileDep,
+) -> dict[str, Any] | JSONResponse:
     try:
         url = normalize_url(body.url)
     except InvalidURLError as exc:
         raise HTTPException(422, str(exc)) from exc
+    ip = request.client.host if request.client else "unknown"
+    if not await turnstile(body.turnstile_token, ip):
+        raise HTTPException(403, "The bot check failed. Reload the page and try again.")
     cached = await _one(
         conn,
         """
@@ -58,10 +73,15 @@ async def create_run(
     )
     if in_progress:
         return {"run_id": in_progress[0]}
-    visitor = hash_ip(
-        request.client.host if request.client else "unknown",
-        settings.ip_hash_salt.get_secret_value(),
-    )
+    visitor = hash_ip(ip, settings.ip_hash_salt.get_secret_value())
+    # One lock for all run creation: count-then-insert can't race past a limit.
+    await conn.execute("SELECT pg_advisory_xact_lock(hashtext('create_run'))")
+    limit = await _limit_reached(conn, visitor, settings)
+    if limit:
+        await conn.rollback()
+        return JSONResponse(
+            status_code=429, content={"detail": LIMIT_MESSAGES[limit], "limit": limit}
+        )
     created = await _one(
         conn,
         "INSERT INTO runs (start_url, normalized_url, ip_hash) VALUES (%s, %s, %s) RETURNING id",
@@ -69,6 +89,24 @@ async def create_run(
     )
     await conn.commit()
     return {"run_id": created[0]}
+
+
+async def _limit_reached(
+    conn: psycopg.AsyncConnection, visitor: str, settings: SettingsDep
+) -> str | None:
+    row = await _one(
+        conn,
+        """
+        SELECT count(*) FILTER (WHERE ip_hash = %s), count(*)
+        FROM runs WHERE created_at > now() - interval '1 day'
+        """,
+        (visitor,),
+    )
+    if row[0] >= settings.runs_per_ip_per_day:
+        return "per_visitor"
+    if row[1] >= settings.max_runs_per_day:
+        return "global"
+    return None
 
 
 @router.get("/api/samples")
