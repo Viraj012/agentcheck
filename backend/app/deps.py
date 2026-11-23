@@ -30,6 +30,7 @@ def get_chat_llm(request: Request, settings: SettingsDep) -> LLMClient:
     return GeminiLLMClient(
         settings,
         limiter=request.app.state.limiter,
+        embed_limiter=request.app.state.embed_limiter,
         budget=CallBudget(settings.chat_llm_calls),
         usage=Usage(),
     )

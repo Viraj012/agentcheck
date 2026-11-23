@@ -35,13 +35,16 @@ class TokenBucket:
         self._updated = clock()
         self._lock = asyncio.Lock()
 
-    async def acquire(self) -> None:
+    async def acquire(self, cost: float = 1.0) -> None:
+        """Waits until `cost` units are available, then spends them."""
+        if cost > self._capacity:
+            raise ValueError(f"cost {cost} is above the burst of {self._capacity:g}")
         async with self._lock:
             self._refill()
-            if self._tokens < 1.0:
-                await self._sleep((1.0 - self._tokens) / self._per_second)
+            if self._tokens < cost:
+                await self._sleep((cost - self._tokens) / self._per_second)
                 self._refill()
-            self._tokens -= 1.0
+            self._tokens -= cost
 
     def _refill(self) -> None:
         now = self._clock()

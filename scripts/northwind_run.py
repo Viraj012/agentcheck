@@ -22,7 +22,7 @@ from app.config import get_settings  # noqa: E402
 from app.crawler.fetch import SafeFetcher  # noqa: E402
 from app.crawler.local_site import static_resolver, static_site_transport  # noqa: E402
 from app.db import connect  # noqa: E402
-from app.llm.gemini import GeminiLLMClient  # noqa: E402
+from app.llm.gemini import GeminiLLMClient, embed_limiter_for  # noqa: E402
 from app.llm.limits import CallBudget, TokenBucket, Usage  # noqa: E402
 from app.pipeline.run import execute_run  # noqa: E402
 
@@ -36,6 +36,7 @@ async def main(keep: bool) -> None:
     llm = GeminiLLMClient(
         settings,
         limiter=TokenBucket(settings.llm_rpm, burst=settings.llm_burst),
+        embed_limiter=embed_limiter_for(settings),
         budget=budget,
         usage=usage,
     )

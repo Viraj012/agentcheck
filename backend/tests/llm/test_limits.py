@@ -134,3 +134,18 @@ async def test_backoff_is_capped() -> None:
             max_delay=10.0,
         )
     assert max(clock.sleeps) == 10.0
+
+
+async def test_bucket_charges_a_cost_per_acquire() -> None:
+    clock = FakeClock()
+    bucket = TokenBucket(60, burst=40, clock=clock.time, sleep=clock.sleep)
+    await bucket.acquire(40)
+    assert clock.sleeps == []
+    await bucket.acquire(10)
+    assert sum(clock.sleeps) == pytest.approx(10.0)
+
+
+async def test_bucket_rejects_a_cost_above_burst() -> None:
+    bucket = TokenBucket(60, burst=40)
+    with pytest.raises(ValueError, match="burst"):
+        await bucket.acquire(41)

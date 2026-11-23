@@ -1,8 +1,9 @@
 """LLMClient backed by the Google Gemini API (google-genai SDK).
 
 Every attempt to call the API, including retries, waits for the shared rate limiter and
-spends one unit of the run's call budget. The SDK's own retries are switched off so that
-this module is the only place retries happen.
+spends one unit of the run's call budget. Embedding calls also wait for a second limiter
+charged per text, because the free tier counts each embedded text as one request.
+The SDK's own retries are switched off so that this module is the only place retries happen.
 """
 
 import logging
@@ -27,6 +28,11 @@ RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
 log = logging.getLogger("app.llm")
 
 
+def embed_limiter_for(settings: Settings) -> TokenBucket:
+    """A limiter charged per embedded text; one full batch fits in its burst."""
+    return TokenBucket(settings.embed_texts_per_minute, burst=settings.embed_batch)
+
+
 def is_retryable(exc: BaseException) -> bool:
     if isinstance(exc, errors.APIError):
         return exc.code in RETRYABLE_STATUS
@@ -39,6 +45,7 @@ class GeminiLLMClient:
         settings: Settings,
         *,
         limiter: TokenBucket,
+        embed_limiter: TokenBucket,
         budget: CallBudget,
         usage: Usage,
         models: Any = None,
@@ -47,6 +54,7 @@ class GeminiLLMClient:
     ) -> None:
         self._settings = settings
         self._limiter = limiter
+        self._embed_limiter = embed_limiter
         self._budget = budget
         self._usage = usage
         self._models = models if models is not None else _sdk_models(settings)
@@ -117,18 +125,28 @@ class GeminiLLMClient:
                 ),
                 model=model,
                 kind="embed",
+                cost=len(contents),
             )
             self._usage.add(input_tokens=None, output_tokens=None)
             vectors += [self._normalize(embedding.values) for embedding in response.embeddings]
         return vectors
 
-    async def _call(self, request: Callable[[], Awaitable[Any]], *, model: str, kind: str) -> Any:
+    async def _call(
+        self,
+        request: Callable[[], Awaitable[Any]],
+        *,
+        model: str,
+        kind: str,
+        cost: int = 0,
+    ) -> Any:
         attempts = 0
 
         async def attempt() -> Any:
             nonlocal attempts
             self._budget.spend()
             await self._limiter.acquire()
+            if cost:
+                await self._embed_limiter.acquire(cost)
             attempts += 1
             started = time.monotonic()
             outcome = "ok"

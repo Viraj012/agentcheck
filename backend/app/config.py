@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     chunk_min_tokens: PositiveInt = 400
     chunk_max_tokens: PositiveInt = 600
     chunk_overlap_tokens: PositiveInt = 50
-    embed_batch: PositiveInt = 100
+    embed_batch: PositiveInt = 40
     retrieve_k: PositiveInt = 6
     retrieve_candidates: PositiveInt = 20
     rrf_k: PositiveInt = 60
@@ -89,6 +89,8 @@ class Settings(BaseSettings):
     max_runs_per_day: PositiveInt = 30
     llm_rpm: PositiveInt = 12
     llm_burst: PositiveInt = 3
+    # The free tier allows 100 embedded texts a minute; burst (embed_batch) + rate stays under it.
+    embed_texts_per_minute: PositiveInt = 55
     max_llm_calls_per_run: PositiveInt = 20
     llm_max_retries: PositiveInt = 4
     llm_backoff_base_s: PositiveFloat = 2.0

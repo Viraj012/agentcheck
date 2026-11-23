@@ -26,7 +26,7 @@ from app.crawler.extract import extract_page  # noqa: E402
 from app.crawler.store import save_pages  # noqa: E402
 from app.db import connect  # noqa: E402
 from app.indexing.store import index_run  # noqa: E402
-from app.llm.gemini import GeminiLLMClient  # noqa: E402
+from app.llm.gemini import GeminiLLMClient, embed_limiter_for  # noqa: E402
 from app.llm.limits import CallBudget, TokenBucket, Usage  # noqa: E402
 from app.retrieval.metrics import mean, recall_at_k, reciprocal_rank  # noqa: E402
 from app.retrieval.rrf import rrf  # noqa: E402
@@ -71,6 +71,7 @@ async def main(queries_file: Path, site: Path, verbose: bool) -> None:
     llm = GeminiLLMClient(
         settings,
         limiter=TokenBucket(settings.llm_rpm, burst=settings.llm_burst),
+        embed_limiter=embed_limiter_for(settings),
         budget=CallBudget(settings.max_llm_calls_per_run),
         usage=usage,
     )

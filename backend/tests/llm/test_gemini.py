@@ -52,15 +52,35 @@ async def no_sleep(_: float) -> None:
     return None
 
 
-def make_client(models: FakeModels, **overrides: Any) -> tuple[GeminiLLMClient, CallBudget, Usage]:
+def make_client(
+    models: FakeModels, embed_limiter_override: TokenBucket | None = None, **overrides: Any
+) -> tuple[GeminiLLMClient, CallBudget, Usage]:
     settings = Settings(_env_file=None, embedding_dim=4, **overrides)
     budget = CallBudget(settings.max_llm_calls_per_run)
     usage = Usage()
     limiter = TokenBucket(6000, burst=100, sleep=no_sleep)
+    embed_limiter = embed_limiter_override or SpyBucket(settings.embed_batch)
     client = GeminiLLMClient(
-        settings, limiter=limiter, budget=budget, usage=usage, models=models, sleep=no_sleep
+        settings,
+        limiter=limiter,
+        embed_limiter=embed_limiter,
+        budget=budget,
+        usage=usage,
+        models=models,
+        sleep=no_sleep,
     )
     return client, budget, usage
+
+
+class SpyBucket(TokenBucket):
+    """Records the cost of every acquire and never waits."""
+
+    def __init__(self, burst: int) -> None:
+        super().__init__(6000, burst=burst, sleep=no_sleep)
+        self.costs: list[float] = []
+
+    async def acquire(self, cost: float = 1.0) -> None:
+        self.costs.append(cost)
 
 
 def rate_limited() -> errors.ClientError:
@@ -216,3 +236,11 @@ async def test_every_attempt_is_logged_with_model_and_outcome(caplog) -> None:
 
 def test_retry_backoff_uses_configured_base() -> None:
     assert Settings(_env_file=None).llm_backoff_base_s == 2.0
+
+
+async def test_embedding_paces_by_texts_not_requests() -> None:
+    """The free tier counts every embedded text against its per-minute request limit."""
+    spy = SpyBucket(40)
+    client, _, _ = make_client(FakeModels(), embed_limiter_override=spy, embed_batch=40)
+    await client.embed(["text"] * 100, task="document")
+    assert spy.costs == [40, 40, 20]

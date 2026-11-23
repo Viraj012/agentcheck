@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 from pydantic import BaseModel  # noqa: E402
 
 from app.config import get_settings  # noqa: E402
-from app.llm.gemini import GeminiLLMClient  # noqa: E402
+from app.llm.gemini import GeminiLLMClient, embed_limiter_for  # noqa: E402
 from app.llm.limits import CallBudget, TokenBucket, Usage  # noqa: E402
 
 
@@ -29,6 +29,7 @@ async def main() -> None:
     client = GeminiLLMClient(
         settings,
         limiter=TokenBucket(settings.llm_rpm, burst=settings.llm_burst),
+        embed_limiter=embed_limiter_for(settings),
         budget=CallBudget(3),
         usage=usage,
     )

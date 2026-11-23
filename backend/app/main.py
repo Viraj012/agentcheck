@@ -10,7 +10,7 @@ from app.api.chat import router as chat_router
 from app.api.runs import router as runs_router
 from app.config import APP_NAME, Settings, get_settings
 from app.crawler.fetch import SafeFetcher
-from app.llm.gemini import GeminiLLMClient
+from app.llm.gemini import GeminiLLMClient, embed_limiter_for
 from app.llm.limits import CallBudget, TokenBucket, Usage
 from app.logging_setup import configure_logging
 from app.pipeline.worker import worker_loop
@@ -21,8 +21,14 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging()
     limiter = TokenBucket(settings.llm_rpm, burst=settings.llm_burst)
+    embed_limiter = embed_limiter_for(settings)
     application.state.limiter = limiter
-    worker = asyncio.create_task(_worker(settings, limiter)) if settings.worker_enabled else None
+    application.state.embed_limiter = embed_limiter
+    worker = (
+        asyncio.create_task(_worker(settings, limiter, embed_limiter))
+        if settings.worker_enabled
+        else None
+    )
     yield
     if worker is not None:
         worker.cancel()
@@ -30,9 +36,11 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             await worker
 
 
-async def _worker(settings: Settings, limiter: TokenBucket) -> None:
+async def _worker(settings: Settings, limiter: TokenBucket, embed_limiter: TokenBucket) -> None:
     def llm_factory(budget: CallBudget, usage: Usage) -> GeminiLLMClient:
-        return GeminiLLMClient(settings, limiter=limiter, budget=budget, usage=usage)
+        return GeminiLLMClient(
+            settings, limiter=limiter, embed_limiter=embed_limiter, budget=budget, usage=usage
+        )
 
     await worker_loop(
         settings.database_url,

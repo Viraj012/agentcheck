@@ -25,7 +25,7 @@ from app.crawler.extract import extract_page  # noqa: E402
 from app.crawler.store import save_pages  # noqa: E402
 from app.db import connect  # noqa: E402
 from app.indexing.store import index_run  # noqa: E402
-from app.llm.gemini import GeminiLLMClient  # noqa: E402
+from app.llm.gemini import GeminiLLMClient, embed_limiter_for  # noqa: E402
 from app.llm.limits import CallBudget, TokenBucket, Usage  # noqa: E402
 from app.retrieval.search import hybrid_search  # noqa: E402
 
@@ -79,6 +79,7 @@ async def main(cases: list[tuple[str, str, str | None]]) -> None:
     llm = GeminiLLMClient(
         settings,
         limiter=TokenBucket(settings.llm_rpm, burst=settings.llm_burst),
+        embed_limiter=embed_limiter_for(settings),
         budget=CallBudget(settings.max_llm_calls_per_run),
         usage=usage,
     )
