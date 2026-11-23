@@ -56,8 +56,9 @@ export function asSentence(text: string): string {
 }
 
 /** Public, server-rendered help centers that work well as a first try. */
+/** Small real help centers (roughly 10–35k tokens of text) that fit a free-tier check. */
 export const EXAMPLE_SITES: { name: string; url: string }[] = [
   { name: "DuckDuckGo help", url: "https://duckduckgo.com/duckduckgo-help-pages/" },
-  { name: "uv docs", url: "https://docs.astral.sh/uv/getting-started/" },
-  { name: "FastAPI tutorial", url: "https://fastapi.tiangolo.com/tutorial/" },
+  { name: "Mullvad VPN help", url: "https://mullvad.net/en/help" },
+  { name: "Tailscale docs", url: "https://tailscale.com/kb" },
 ];

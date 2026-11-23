@@ -13,13 +13,16 @@ export function Samples() {
     getSamples().then(setSamples, () => setSamples([]));
   }, []);
 
-  if (samples.length === 0) return null;
   return (
     <section aria-labelledby="samples-title" className="mt-10">
       <h2 id="samples-title" className="font-semibold">
         Or open a sample report
       </h2>
       <ul className="mt-2 space-y-1">
+        <li>
+          <Link href="/demo">Northwind Supply Co.</Link>
+          <span className="text-graphite"> (a made-up store&apos;s help center, saved report)</span>
+        </li>
         {samples.map((s) => (
           <li key={s.report_id}>
             <Link href={`/reports/${s.report_id}`}>{hostOf(s.start_url)}</Link>

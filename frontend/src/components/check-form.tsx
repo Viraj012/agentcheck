@@ -25,6 +25,17 @@ export function CheckForm() {
     return () => clearTimeout(slow);
   }, []);
 
+  // Next keeps this page alive, hidden, after navigating to a run. Start fresh when the visitor comes back.
+  useEffect(
+    () => () => {
+      setUrl("");
+      setError(null);
+      setSubmitting(false);
+      setToken(null);
+    },
+    [],
+  );
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);

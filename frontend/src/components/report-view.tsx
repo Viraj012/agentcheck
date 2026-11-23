@@ -29,13 +29,19 @@ export function ReportView() {
     return <Notice title="The report didn't load" tone="problem">{error.message} Reload the page to try again.</Notice>;
   }
   if (!report) return <p className="text-graphite" role="status">Loading the report…</p>;
+  return <ReportBody report={report} />;
+}
 
+/** The report itself. A saved demo report has no live agent behind it, so it can't be chatted with. */
+export function ReportBody({ report, demo = false }: { report: Report; demo?: boolean }) {
   const summary = report.category_scores;
   const finished = new Date(report.finished_at).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
   return (
     <article>
       <p className="text-graphite">
-        Readiness report for <a href={report.start_url}>{hostOf(report.start_url)}</a>, checked {finished}
+        Readiness report for{" "}
+        {demo ? hostOf(report.start_url) : <a href={report.start_url}>{hostOf(report.start_url)}</a>}, checked{" "}
+        {finished}
       </p>
       <h1 className="sr-only">Readiness report: {VERDICT_LABEL[report.verdict]}</h1>
       <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
@@ -65,7 +71,7 @@ export function ReportView() {
       <Failures failures={report.failures} />
       <Gaps gaps={report.gaps} />
       <Handover reportId={report.report_id} handover={report.handover} />
-      <AskAgent reportId={report.report_id} />
+      {!demo && <AskAgent reportId={report.report_id} />}
 
       <footer className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-rule pt-6 text-sm text-graphite">
         <p>
